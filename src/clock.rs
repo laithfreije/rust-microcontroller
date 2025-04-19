@@ -3,12 +3,14 @@ use rp2040_hal::clocks::{init_clocks_and_plls, ClocksManager};
 use rp2040_hal::{pac, Watchdog};
 use rp_pico::XOSC_CRYSTAL_FREQ;
 
+#[allow(unused)]
 /// A struct for managing clocks in the Raspberry PI Pico H.
 pub struct ClockAPI{
     // Define necessary clock variables here
     pub clocks: ClocksManager,
 }
 
+#[allow(unused)]
 impl ClockAPI {
     pub fn new(
         xosc: pac::XOSC,
