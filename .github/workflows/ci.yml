@@ -1,0 +1,46 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ "development" ]
+  pull_request:
+    branches: [ "development" ]
+
+jobs:
+  pre-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Add thumb target
+        run: rustup target add thumbv6m-none-eabi
+
+      - name: Run Clippy
+        run: cargo clippy --target=thumbv6m-none-eabi -- -D warnings
+
+      - name: Run fmt check
+        run: cargo fmt --all -- --check
+
+      - name: Check documentation
+        run: cargo doc --no-deps --target=thumbv6m-none-eabi
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+
+    - name: Add thumb target
+      run: rustup target add thumbv6m-none-eabi
+
+    - name: Build Debug
+      run: cargo build --verbose
+
+    - name: Build Release
+      run: cargo build --verbose --release
