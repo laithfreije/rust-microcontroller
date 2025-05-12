@@ -26,7 +26,7 @@ impl ClockAPI {
             clocks,
             pll_sys,
             pll_usb,
-            &mut resets,
+            resets,
             watchdog,
         )
         .ok()

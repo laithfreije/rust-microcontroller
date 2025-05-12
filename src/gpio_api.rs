@@ -3,12 +3,12 @@ const NUM_PINS: usize = 30;
 use rp2040_pac::io_bank0::gpio::gpio_ctrl::FUNCSEL_A::SIO as SIOFuncSel;
 use rp2040_pac::{IO_BANK0, RESETS, SIO};
 
-pub struct GPIO {
+pub struct Gpio {
     sio: SIO,
 }
 
 #[allow(unused)]
-impl GPIO {
+impl Gpio {
     fn write_reset_registers(resets: &mut RESETS) {
         resets.reset().write(|w| unsafe { w.bits(0) });
         while resets.reset_done().read().bits() != 0xFFFFFFFF {}
@@ -35,7 +35,7 @@ impl GPIO {
                 .modify(|_, w| w.funcsel().variant(SIOFuncSel));
         }
 
-        GPIO { sio }
+        Gpio { sio }
     }
 
     pub fn set_high(&mut self, pin_num: usize) {

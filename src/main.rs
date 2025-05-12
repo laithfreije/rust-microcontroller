@@ -7,7 +7,7 @@ mod clock;
 
 mod gpio_api;
 
-use crate::gpio_api::GPIO;
+use crate::gpio_api::Gpio;
 // Import the rp2040_hal crate
 use crate::clock::ClockAPI;
 use rp2040_hal::{Clock, Watchdog, entry};
@@ -43,7 +43,7 @@ fn _start() -> ! {
     );
 
     // Initialize GPIO pins
-    let mut pins = GPIO::new(
+    let mut pins = Gpio::new(
         peripherals.SIO,
         &mut peripherals.RESETS,
         &mut peripherals.IO_BANK0,
