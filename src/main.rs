@@ -1,29 +1,33 @@
-//! # Rust Microcontroller
-//! This is a base application that runs on the Raspberry Pi Pico H microcontroller.
+//! # Raspberry Pi Pico Microcontroller
+//!
+//! This application runs on the Raspberry Pi Pico RP2040 Microcontroller
+//!
 #![no_std]
 #![no_main]
 
 mod clock;
-
 mod gpio_api;
 
-use crate::gpio_api::Gpio;
-// Import the rp2040_hal crate
 use crate::clock::ClockAPI;
+use crate::gpio_api::Gpio;
 use rp2040_hal::{Clock, Watchdog, entry};
 use rp2040_pac::Peripherals;
 
-// The onboard LED on the pico H microcontroller is pin 25
+/// GPIO pin number for the onboard LED
 const ONBOARD_LED_NUM: usize = 25;
 
-// Blink the LED every 1 second
+/// Delay in milliseconds between LED state changes
 const LED_BLINK_DELAY_MS: u32 = 1000;
 
+/// Panic handler that loops indefinitely
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
+/// Main entry point for the application
+///
+/// Initializes the system and enters the main loop
 #[entry]
 fn _start() -> ! {
     // This object is used to access peripherals such as GPIO and reset registers
