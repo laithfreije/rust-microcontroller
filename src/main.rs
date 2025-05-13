@@ -5,19 +5,19 @@
 #![no_std]
 #![no_main]
 
-mod clock;
-mod gpio_api;
+mod cli;
+mod clocks;
+mod constants;
+mod peripherals;
 
-use crate::clock::ClockAPI;
-use crate::gpio_api::Gpio;
-use rp2040_hal::{Clock, Watchdog, entry};
+use crate::cli::Cli;
+use crate::clocks::ClockAPI;
+use crate::peripherals::gpio::Gpio;
+use rp2040_hal::{Watchdog, entry};
 use rp2040_pac::Peripherals;
 
 /// GPIO pin number for the onboard LED
 const ONBOARD_LED_NUM: usize = 25;
-
-/// Delay in milliseconds between LED state changes
-const LED_BLINK_DELAY_MS: u32 = 1000;
 
 /// Panic handler that loops indefinitely
 #[panic_handler]
@@ -30,6 +30,8 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
 /// Initializes the system and enters the main loop
 #[entry]
 fn _start() -> ! {
+    unsafe { cortex_m::interrupt::enable() };
+
     // This object is used to access peripherals such as GPIO and reset registers
     let mut peripherals = Peripherals::take().unwrap();
 
@@ -50,22 +52,24 @@ fn _start() -> ! {
     let mut pins = Gpio::new(
         peripherals.SIO,
         &mut peripherals.RESETS,
-        &mut peripherals.IO_BANK0,
+        peripherals.IO_BANK0,
+        peripherals.PADS_BANK0,
     );
 
     // Set the onboard LED to output mode
     pins.set_output(ONBOARD_LED_NUM);
+    pins.set_function(0, 0b010);
+    pins.set_function(1, 0b010);
 
-    // Create a delay provider using the system clock
-    let mut delay = cortex_m::delay::Delay::new(
-        cortex_m::Peripherals::take().unwrap().SYST,
-        clocks.clocks.system_clock.freq().to_Hz(),
+    let mut cli: Cli = Cli::new(
+        peripherals.UART0,
+        &mut peripherals.RESETS,
+        clocks.uart_clock_freq(),
     );
 
+    pins.set_high(ONBOARD_LED_NUM);
+
     loop {
-        pins.set_high(ONBOARD_LED_NUM);
-        delay.delay_ms(LED_BLINK_DELAY_MS);
-        pins.set_low(ONBOARD_LED_NUM);
-        delay.delay_ms(LED_BLINK_DELAY_MS);
+        cli.process_input();
     }
 }
