@@ -14,10 +14,10 @@ static INPUT_QUEUE: Mutex<RefCell<Queue<u8, MAX_LINE_LENGTH>>> =
 
 #[allow(unused)]
 enum UartWordLength {
-    FiveBits = 0b00,
-    SixBits = 0b01,
-    SevenBits = 0b10,
-    EightBits = 0b11,
+    Five = 0b00,
+    Six = 0b01,
+    Seven = 0b10,
+    Eight = 0b11,
 }
 
 #[interrupt]
@@ -79,7 +79,7 @@ impl Uart {
 
         uart
     }
-    
+
     fn reset_peripheral(&mut self, resets: &mut RESETS) {
         resets.reset().modify(|_, w| w.uart0().clear_bit());
         while resets.reset_done().read().uart0().bit_is_clear() {}
@@ -134,47 +134,38 @@ impl SerialPort for Uart {
     }
 
     fn set_fifo_enable(&mut self, enable: bool) {
-        match enable {
-            true => {
-                self.uart_peripheral
-                    .uartlcr_h()
-                    .modify(|_, w| w.fen().set_bit());
-            }
-            false => {
-                self.uart_peripheral
-                    .uartlcr_h()
-                    .modify(|_, w| w.fen().clear_bit());
-            }
+        if enable {
+            self.uart_peripheral
+                .uartlcr_h()
+                .modify(|_, w| w.fen().set_bit());
+        } else {
+            self.uart_peripheral
+                .uartlcr_h()
+                .modify(|_, w| w.fen().clear_bit());
         }
     }
 
     fn use_two_stop_bits(&mut self, use_two_stop_bits: bool) {
-        match use_two_stop_bits {
-            true => {
-                self.uart_peripheral
-                    .uartlcr_h()
-                    .modify(|_, w| w.stp2().set_bit());
-            }
-            false => {
-                self.uart_peripheral
-                    .uartlcr_h()
-                    .modify(|_, w| w.stp2().clear_bit());
-            }
+        if use_two_stop_bits {
+            self.uart_peripheral
+                .uartlcr_h()
+                .modify(|_, w| w.stp2().set_bit());
+        } else {
+            self.uart_peripheral
+                .uartlcr_h()
+                .modify(|_, w| w.stp2().clear_bit());
         }
     }
 
     fn set_parity(&mut self, parity: bool) {
-        match parity {
-            true => {
-                self.uart_peripheral
-                    .uartlcr_h()
-                    .modify(|_, w| w.pen().set_bit());
-            }
-            false => {
-                self.uart_peripheral
-                    .uartlcr_h()
-                    .modify(|_, w| w.pen().clear_bit());
-            }
+        if parity {
+            self.uart_peripheral
+                .uartlcr_h()
+                .modify(|_, w| w.pen().set_bit());
+        } else {
+            self.uart_peripheral
+                .uartlcr_h()
+                .modify(|_, w| w.pen().clear_bit());
         }
     }
 
@@ -185,7 +176,7 @@ impl SerialPort for Uart {
     }
 
     fn config_parameters(&mut self) {
-        self.config_word_length(UartWordLength::EightBits);
+        self.config_word_length(UartWordLength::Eight);
         self.set_fifo_enable(true);
         self.use_two_stop_bits(false);
         self.set_parity(false);
@@ -245,10 +236,9 @@ impl SerialPort for Uart {
                 });
             }
         }
-
     }
 
-     fn putc(&mut self, c: u8) {
+    fn putc(&mut self, c: u8) {
         // Wait until TX FIFO is not full
         while self.uart_peripheral.uartfr().read().txff().bit_is_set() {}
         // Write the character to the data register

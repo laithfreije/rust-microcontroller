@@ -1,7 +1,5 @@
 use crate::constants::MAX_LINE_LENGTH;
-use crate::peripherals::uart::terminal::EscapeState::{
-    EscapeAndBracketReceived, EscapeNotReceived, EscapeReceived,
-};
+use crate::peripherals::uart::terminal::EscapeState::{BracketReceived, NotReceived, Received};
 use crate::peripherals::uart::{SerialPort, Uart};
 use rp2040_pac::{RESETS, UART0};
 
@@ -37,9 +35,9 @@ impl ASCIIControl {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum EscapeState {
-    EscapeNotReceived,
-    EscapeReceived,
-    EscapeAndBracketReceived,
+    NotReceived,
+    Received,
+    BracketReceived,
 }
 
 pub struct LineEditor {
@@ -84,7 +82,7 @@ impl LineEditor {
         let current_line: heapless::Vec<u8, MAX_LINE_LENGTH> = heapless::Vec::new();
         let mut editor = LineEditor {
             cursor: 0,
-            escape_state: EscapeNotReceived,
+            escape_state: NotReceived,
             uart,
             current_line,
             prompt_color,
@@ -137,12 +135,8 @@ impl LineEditor {
     }
 
     pub fn print(&mut self, s: &[u8], apply_prompt_color: bool) {
-        match apply_prompt_color {
-            true => {
-                self.apply_prompt_color();
-            }
-
-            false => {}
+        if apply_prompt_color {
+            self.apply_prompt_color();
         }
 
         self.uart.print(s);
@@ -216,52 +210,37 @@ impl LineEditor {
     }
 
     fn backspace(&mut self) {
-        match self.cursor {
-            x if x <= 0 => {
-                return;
-            }
-            _ => {
-                self.current_line.remove(self.cursor - 1);
-                self.move_cursor_left();
-                self.rewrite_line();
-            }
+        if self.cursor > 0 {
+            self.current_line.remove(self.cursor - 1);
+            self.move_cursor_left();
+            self.rewrite_line();
         }
     }
 
     fn space(&mut self) {
-        match self.current_line.len() {
-            x if x >= MAX_LINE_LENGTH => {
-                return;
-            }
-            _ => {
-                self.current_line
-                    .insert(self.cursor, ASCIICode::Space as u8)
-                    .unwrap();
-                self.move_cursor_right();
-                self.rewrite_line();
-            }
+        if self.current_line.len() < MAX_LINE_LENGTH {
+            self.current_line
+                .insert(self.cursor, ASCIICode::Space as u8)
+                .unwrap();
+            self.move_cursor_right();
+            self.rewrite_line();
         }
     }
 
     fn insert_character(&mut self, data: u8) {
-        match self.current_line.len() {
-            x if x >= MAX_LINE_LENGTH => {
-                return;
-            }
-            _ => {
-                self.current_line.insert(self.cursor, data).unwrap();
-                self.uart.putc(data);
-                self.cursor += 1;
-            }
+        if self.current_line.len() < MAX_LINE_LENGTH {
+            self.current_line.insert(self.cursor, data).unwrap();
+            self.uart.putc(data);
+            self.cursor += 1;
         }
     }
 
     pub fn process_bytes(&mut self, buffer: &mut heapless::Vec<u8, MAX_LINE_LENGTH>) {
         for &data in buffer.iter() {
             match self.escape_state {
-                EscapeNotReceived => match data {
+                NotReceived => match data {
                     x if x == ASCIICode::Escape as u8 => {
-                        self.escape_state = EscapeReceived; // '\x1b' (ESC)
+                        self.escape_state = Received; // '\x1b' (ESC)
                     }
 
                     x if x == ASCIICode::CarriageReturn as u8 || x == ASCIICode::Newline as u8 => {
@@ -284,16 +263,16 @@ impl LineEditor {
                     _ => {}
                 },
 
-                EscapeReceived => match data {
+                Received => match data {
                     x if x == ASCIICode::Bracket as u8 => {
-                        self.escape_state = EscapeAndBracketReceived;
+                        self.escape_state = BracketReceived;
                     }
                     _ => {
-                        self.escape_state = EscapeNotReceived;
+                        self.escape_state = NotReceived;
                     }
                 },
 
-                EscapeAndBracketReceived => {
+                BracketReceived => {
                     match data {
                         x if x == ASCIICode::ArrowLeft as u8 => {
                             self.move_cursor_left();
@@ -304,7 +283,7 @@ impl LineEditor {
 
                         _ => {}
                     }
-                    self.escape_state = EscapeNotReceived;
+                    self.escape_state = NotReceived;
                 }
             }
         }
